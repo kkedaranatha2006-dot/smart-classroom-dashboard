@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Classroom Monitoring System</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"
+            defer></script>
+</head>
+
+<body>
+<div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">SC</div>
+            <div>
+                <h2>SmartClass</h2>
+                <p>Monitoring System</p>
+            </div>
+        </div>
+
+        <div class="nav-label">WORKSPACE</div>
+
+        <a href="#dashboard" class="nav-item active">
+            <span>▦</span> Dashboard
+        </a>
+
+        <a href="#analytics" class="nav-item">
+            <span>▥</span> Analytics
+        </a>
+
+        <a href="#history" class="nav-item">
+            <span>◷</span> Sensor History
+        </a>
+
+        <div class="sidebar-bottom">
+            <div class="connection-card">
+                <span class="connection-dot"></span>
+                <div>
+                    <strong>Sensor Network</strong>
+                    <p id="connectionStatus">Connecting...</p>
+                </div>
+            </div>
+            <p class="sidebar-footer">IoT Classroom Project · 2026</p>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="dashboard">
+
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">CLASSROOM MANAGEMENT</p>
+                <h1>Dashboard Overview</h1>
+                <p class="subtitle">
+                    Monitor your classroom environment in real time.
+                </p>
+            </div>
+
+            <div class="topbar-right">
+                <div class="live-badge">
+                    <span class="live-dot"></span> LIVE MONITORING
+                </div>
+                <div class="date-box">
+                    <span class="date-label">LAST UPDATED</span>
+                    <strong id="lastUpdated">Waiting for data</strong>
+                </div>
+            </div>
+        </header>
+
+        <!-- Status Banner -->
+        <section class="status-banner" id="statusBanner">
+            <div class="status-symbol" id="statusSymbol">✓</div>
+            <div class="status-message">
+                <h3 id="classroomStatus">Waiting for sensor data</h3>
+                <p id="statusDescription">
+                    Connect your ESP8266 to begin monitoring.
+                </p>
+            </div>
+            <span class="status-tag" id="statusTag">WAITING</span>
+        </section>
+
+        <!-- Sensor Cards -->
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <h2>Environmental Overview</h2>
+                    <p>Live readings from your connected sensors</p>
+                </div>
+                <span class="refresh-label">
+                    <span class="live-dot"></span> Auto refresh: 3 sec
+                </span>
+            </div>
+
+            <div class="sensor-grid">
+
+                <article class="sensor-card temperature-card">
+                    <div class="card-top">
+                        <div class="sensor-icon temp-icon">°C</div>
+                        <span class="card-indicator">TEMP</span>
+                    </div>
+                    <p class="sensor-name">Temperature</p>
+                    <div class="reading">
+                        <span id="temperature">--</span>
+                        <span class="unit">°C</span>
+                    </div>
+                    <p class="sensor-description" id="temperatureNote">
+                        Waiting for reading
+                    </p>
+                    <div class="progress-track">
+                        <div class="progress-fill temp-fill"
+                             id="temperatureBar"></div>
+                    </div>
+                </article>
+
+                <article class="sensor-card humidity-card">
+                    <div class="card-top">
+                        <div class="sensor-icon humidity-icon">%</div>
+                        <span class="card-indicator">HUMIDITY</span>
+                    </div>
+                    <p class="sensor-name">Humidity</p>
+                    <div class="reading">
+                        <span id="humidity">--</span>
+                        <span class="unit">%</span>
+                    </div>
+                    <p class="sensor-description" id="humidityNote">
+                        Waiting for reading
+                    </p>
+                    <div class="progress-track">
+                        <div class="progress-fill humidity-fill"
+                             id="humidityBar"></div>
+                    </div>
+                </article>
+
+                <article class="sensor-card light-card">
+                    <div class="card-top">
+                        <div class="sensor-icon light-icon">☀</div>
+                        <span class="card-indicator">LIGHT</span>
+                    </div>
+                    <p class="sensor-name">Light Intensity</p>
+                    <div class="reading">
+                        <span id="light">--</span>
+                        <span class="unit">ADC</span>
+                    </div>
+                    <p class="sensor-description" id="lightNote">
+                        Raw LDR sensor value
+                    </p>
+                    <div class="progress-track">
+                        <div class="progress-fill light-fill"
+                             id="lightBar"></div>
+                    </div>
+                </article>
+
+                <article class="sensor-card occupancy-card">
+                    <div class="card-top">
+                        <div class="sensor-icon occupancy-icon">⌖</div>
+                        <span class="card-indicator">PIR</span>
+                    </div>
+                    <p class="sensor-name">Motion Detection</p>
+                    <div class="reading occupancy-reading">
+                        <span id="occupancy">--</span>
+                    </div>
+                    <p class="sensor-description" id="occupancyNote">
+                        Waiting for PIR sensor
+                    </p>
+                    <div class="occupancy-indicator">
+                        <span class="live-dot" id="occupancyDot"></span>
+                        <span id="occupancyState">No reading yet</span>
+                    </div>
+                </article>
+
+            </div>
+        </section>
+
+        <!-- Charts -->
+        <section class="section-block" id="analytics">
+            <div class="section-heading">
+                <div>
+                    <h2>Sensor Analytics</h2>
+                    <p>Changes recorded over time</p>
+                </div>
+                <span class="chart-caption">Latest 20 readings</span>
+            </div>
+
+            <div class="chart-grid">
+                <article class="panel chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Temperature Trend</h3>
+                            <p>Temperature in °C</p>
+                        </div>
+                        <span class="chart-mark temp-mark"></span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="temperatureChart"></canvas>
+                    </div>
+                </article>
+
+                <article class="panel chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Humidity Trend</h3>
+                            <p>Relative humidity in %</p>
+                        </div>
+                        <span class="chart-mark humidity-mark"></span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="humidityChart"></canvas>
+                    </div>
+                </article>
+
+                <article class="panel chart-panel light-chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Light Intensity</h3>
+                            <p>Raw analog readings (0–1023)</p>
+                        </div>
+                        <span class="chart-mark light-mark"></span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="lightChart"></canvas>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Alerts -->
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <h2>Environmental Alerts</h2>
+                    <p>Conditions that may need attention</p>
+                </div>
+                <span class="alert-count" id="alertCount">0 alerts</span>
+            </div>
+
+            <div class="panel alerts-panel" id="alertsList">
+                <div class="empty-state">
+                    <span>✓</span>
+                    <p>Waiting for sensor readings...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Table -->
+        <section class="section-block" id="history">
+            <div class="section-heading">
+                <div>
+                    <h2>Recent Sensor History</h2>
+                    <p>Previously recorded classroom readings</p>
+                </div>
+                <a href="/api/export" class="export-button">
+                    ↓ Download CSV
+                </a>
+            </div>
+
+            <div class="panel table-panel">
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>TIME</th>
+                                <th>TEMPERATURE</th>
+                                <th>HUMIDITY</th>
+                                <th>LIGHT (ADC)</th>
+                                <th>MOTION</th>
+                                <th>STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                            <tr>
+                                <td colspan="6" class="table-empty">
+                                    Waiting for recorded readings...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <span id="historyCount">0 readings displayed</span>
+                    <span>Stored in local SQLite database</span>
+                </div>
+            </div>
+        </section>
+
+        <footer class="main-footer">
+            <span>Smart Classroom Monitoring System</span>
+            <span>ESP8266 · DHT11 · LDR · PIR</span>
+        </footer>
+
+    </main>
+</div>
+</body>
+</html>
