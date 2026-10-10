@@ -167,27 +167,53 @@ function updateProgress(id, value, maximum) {
     $(id).style.width = `${percent}%`;
 }
 
+// Generate warnings with current readings and configured limits.
 function getAlerts(data) {
     const alerts = [];
 
-    if (data.temperature > LIMITS.highTemperature) {
+    const temperature = Number(data.temperature);
+    const humidity = Number(data.humidity);
+    const light = Number(data.light);
+
+    if (
+        data.temperature !== null &&
+        data.temperature !== undefined &&
+        Number.isFinite(temperature) &&
+        temperature > LIMITS.highTemperature
+    ) {
         alerts.push({
             title: "High temperature",
-            message: `Temperature is ${data.temperature} °C. Check classroom ventilation.`
+            value: `${temperature.toFixed(1)} °C`,
+            limit: `${LIMITS.highTemperature} °C`,
+            message: "Check classroom ventilation."
         });
     }
 
-    if (data.humidity > LIMITS.highHumidity) {
+    if (
+        data.humidity !== null &&
+        data.humidity !== undefined &&
+        Number.isFinite(humidity) &&
+        humidity > LIMITS.highHumidity
+    ) {
         alerts.push({
             title: "High humidity",
-            message: `Humidity is ${data.humidity}%. Check ventilation.`
+            value: `${humidity.toFixed(1)}%`,
+            limit: `${LIMITS.highHumidity}%`,
+            message: "Check classroom ventilation."
         });
     }
 
-    if (data.light < LIMITS.lowLight) {
+    if (
+        data.light !== null &&
+        data.light !== undefined &&
+        Number.isFinite(light) &&
+        light < LIMITS.lowLight
+    ) {
         alerts.push({
             title: "Low light level",
-            message: `Raw LDR reading is ${data.light}. Verify the sensor calibration and room lighting.`
+            value: `${light}`,
+            limit: `${LIMITS.lowLight} (minimum)`,
+            message: "Check room lighting and sensor calibration."
         });
     }
 
@@ -240,6 +266,7 @@ function updateStatus(data) {
     }
 }
 
+// Display the current sensor value and its limit in every warning.
 function updateAlerts(data) {
     const alerts = getAlerts(data);
     const container = $("alertsList");
@@ -262,8 +289,10 @@ function updateAlerts(data) {
     container.innerHTML = alerts.map(alert => `
         <div class="alert-item">
             <div class="alert-icon">!</div>
-            <div>
+            <div class="alert-content">
                 <strong>${alert.title}</strong>
+                <p><b>Current reading:</b> ${alert.value}</p>
+                <p><b>Configured limit:</b> ${alert.limit}</p>
                 <p>${alert.message}</p>
             </div>
         </div>
@@ -312,19 +341,26 @@ function updateDashboard(data) {
             : "Humidity reading received"
     );
 
-    setText("lightNote", "Raw analog value from LDR");
+    setText(
+        "lightNote",
+        light < LIMITS.lowLight
+            ? "Below configured minimum"
+            : "Raw analog value from LDR"
+    );
 
     updateProgress("temperatureBar", temperature, 50);
     updateProgress("humidityBar", humidity, 100);
     updateProgress("lightBar", light, 1023);
 
     setText("occupancy", motion === 1 ? "Motion" : "No motion");
+
     setText(
         "occupancyNote",
         motion === 1
             ? "PIR sensor detected movement"
             : "No movement detected currently"
     );
+
     setText(
         "occupancyState",
         motion === 1 ? "Movement detected" : "No movement"
