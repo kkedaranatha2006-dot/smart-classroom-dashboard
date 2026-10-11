@@ -1,117 +1,48 @@
 const $ = (id) => document.getElementById(id);
 
-let temperatureChart;
-let humidityChart;
-let lightChart;
-
-let lastHistorySignature = "";
-let lastSensorResponse = null;
-
 const REFRESH_MS = 3000;
 const MAX_CHART_POINTS = 20;
 
-// Keep these limits consistent with app.py.
 const LIMITS = {
     highTemperature: 35,
     highHumidity: 70,
     lowLight: 150
 };
 
-function createChart(canvasId, label, color, fillColor) {
-    const canvas = $(canvasId);
+let temperatureChart = null;
+let humidityChart = null;
+let lightChart = null;
+let lastHistorySignature = "";
 
-    return new Chart(canvas, {
-        type: "line",
-        data: {
-            labels: [],
-            datasets: [{
-                label,
-                data: [],
-                borderColor: color,
-                backgroundColor: fillColor,
-                fill: true,
-                tension: 0.35,
-                borderWidth: 2.5,
-                pointRadius: 3,
-                pointHoverRadius: 5,
-                pointBackgroundColor: color,
-                spanGaps: false
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                intersect: false,
-                mode: "index"
-            },
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: "#8794a8",
-                        maxTicksLimit: 6,
-                        maxRotation: 0
-                    },
-                    border: {
-                        display: false
-                    }
-                },
-                y: {
-                    beginAtZero: false,
-                    grid: {
-                        color: "#edf1f7"
-                    },
-                    ticks: {
-                        color: "#8794a8",
-                        maxTicksLimit: 5
-                    },
-                    border: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
+
+function setText(id, value) {
+    const element = $(id);
+
+    if (element) {
+        element.textContent = value;
+    }
 }
 
-function initializeCharts() {
-    if (typeof Chart === "undefined") {
-        console.warn("Chart.js could not load.");
-        return;
+
+function formatNumber(value, decimals = 1) {
+    if (value === null || value === undefined || value === "") {
+        return "--";
     }
 
-    temperatureChart = createChart(
-        "temperatureChart",
-        "Temperature",
-        "#f29567",
-        "rgba(242,149,103,0.12)"
-    );
+    const number = Number(value);
 
-    humidityChart = createChart(
-        "humidityChart",
-        "Humidity",
-        "#4d91ee",
-        "rgba(77,145,238,0.12)"
-    );
+    if (!Number.isFinite(number)) {
+        return "--";
+    }
 
-    lightChart = createChart(
-        "lightChart",
-        "Light",
-        "#dcb52e",
-        "rgba(220,181,46,0.13)"
-    );
+    return number.toFixed(decimals);
 }
 
+
 function formatTime(value) {
-    if (!value) return "--";
+    if (!value) {
+        return "--";
+    }
 
     const date = new Date(value);
 
@@ -126,150 +57,126 @@ function formatTime(value) {
     });
 }
 
-function formatDateTime(value) {
-    if (!value) return "Waiting for data";
 
-    const date = new Date(value);
+function setConnection(isOnline) {
+    const dot = $("connectionDot");
 
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-
-    return date.toLocaleString([], {
-        day: "2-digit",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
-    });
-}
-
-function setConnection(connected, message) {
-    $("connectionStatus").textContent = message;
-
-    const dot = document.querySelector(".connection-dot");
-
-    if (dot) {
-        dot.style.background = connected ? "#18c887" : "#ef5968";
-    }
-}
-
-function setText(id, value) {
-    $(id).textContent = value;
-}
-
-function updateProgress(id, value, maximum) {
-    const percent = Math.max(
-        0,
-        Math.min(100, (Number(value) / maximum) * 100)
+    setText(
+        "connectionStatus",
+        isOnline ? "Connected" : "Disconnected"
     );
 
-    $(id).style.width = `${percent}%`;
+    if (dot) {
+        dot.classList.toggle("online", isOnline);
+        dot.classList.toggle("offline", !isOnline);
+    }
 }
 
-// Generate warnings with current readings and configured limits.
-function getAlerts(data) {
+
+function getAlerts(readings) {
     const alerts = [];
 
-    const temperature = Number(data.temperature);
-    const humidity = Number(data.humidity);
-    const light = Number(data.light);
-
     if (
-        data.temperature !== null &&
-        data.temperature !== undefined &&
-        Number.isFinite(temperature) &&
-        temperature > LIMITS.highTemperature
+        readings.temperature !== null &&
+        readings.temperature > LIMITS.highTemperature
     ) {
         alerts.push({
-            title: "High temperature",
-            value: `${temperature.toFixed(1)} °C`,
-            limit: `${LIMITS.highTemperature} °C`,
-            message: "Check classroom ventilation."
+            level: "warning",
+            message: "High temperature detected."
         });
     }
 
     if (
-        data.humidity !== null &&
-        data.humidity !== undefined &&
-        Number.isFinite(humidity) &&
-        humidity > LIMITS.highHumidity
+        readings.humidity !== null &&
+        readings.humidity > LIMITS.highHumidity
     ) {
         alerts.push({
-            title: "High humidity",
-            value: `${humidity.toFixed(1)}%`,
-            limit: `${LIMITS.highHumidity}%`,
-            message: "Check classroom ventilation."
+            level: "warning",
+            message: "High humidity detected."
         });
     }
 
     if (
-        data.light !== null &&
-        data.light !== undefined &&
-        Number.isFinite(light) &&
-        light < LIMITS.lowLight
+        readings.light !== null &&
+        readings.light < LIMITS.lowLight
     ) {
         alerts.push({
-            title: "Low light level",
-            value: `${light}`,
-            limit: `${LIMITS.lowLight} (minimum)`,
-            message: "Check room lighting and sensor calibration."
+            level: "warning",
+            message: "Low light level detected."
         });
     }
 
     return alerts;
 }
 
-function updateStatus(data) {
-    const banner = $("statusBanner");
-    const symbol = $("statusSymbol");
-    const tag = $("statusTag");
 
-    banner.classList.remove("warning", "waiting");
+function updateOverallStatus(alerts, readings) {
+    const hasWarning = alerts.some(
+        (alert) => alert.level === "warning"
+    );
 
-    if (data.temperature === null || data.temperature === undefined) {
-        banner.classList.add("waiting");
+    const unavailable =
+        readings.temperature === null ||
+        readings.humidity === null ||
+        readings.light === null;
 
-        setText("classroomStatus", "Waiting for sensor data");
-        setText(
-            "statusDescription",
-            "The server is running, but no ESP8266 readings have been saved yet."
-        );
+    let status;
 
-        symbol.textContent = "…";
-        tag.textContent = "WAITING";
-        return;
+    if (hasWarning) {
+        status = "Warning";
+    } else if (unavailable) {
+        status = "Incomplete Data";
+    } else {
+        status = "Normal";
     }
 
-    const alerts = getAlerts(data);
-    const warning = alerts.length > 0;
+    setText("classroomStatus", status);
+    setText("statusTag", status.toUpperCase());
 
-    if (warning) {
-        banner.classList.add("warning");
-        symbol.textContent = "!";
-        tag.textContent = "WARNING";
-
-        setText("classroomStatus", "Classroom needs attention");
+    if (hasWarning) {
         setText(
             "statusDescription",
-            `${alerts.length} environmental alert(s) detected. Check the alerts below.`
+            "One or more environmental readings exceed the configured limits."
         );
-    } else {
-        symbol.textContent = "✓";
-        tag.textContent = "NORMAL";
-
-        setText("classroomStatus", "Classroom conditions look normal");
+        setText("statusSymbol", "!");
+    } else if (unavailable) {
         setText(
             "statusDescription",
-            "No configured temperature, humidity or light warnings detected."
+            "Waiting for valid temperature, humidity and light readings."
+        );
+        setText("statusSymbol", "?");
+    } else {
+        setText(
+            "statusDescription",
+            "All environmental readings are within configured limits."
+        );
+        setText("statusSymbol", "✓");
+    }
+
+    const banner = $("statusBanner");
+
+    if (banner) {
+        banner.classList.toggle("warning", hasWarning);
+        banner.classList.toggle(
+            "normal",
+            !hasWarning && !unavailable
+        );
+        banner.classList.toggle(
+            "incomplete",
+            !hasWarning && unavailable
         );
     }
 }
 
-// Display the current sensor value and its limit in every warning.
-function updateAlerts(data) {
-    const alerts = getAlerts(data);
-    const container = $("alertsList");
+
+function updateAlerts(alerts, readings) {
+    const list = $("alertsList");
+
+    if (!list) {
+        return;
+    }
+
+    list.replaceChildren();
 
     setText(
         "alertCount",
@@ -277,258 +184,512 @@ function updateAlerts(data) {
     );
 
     if (alerts.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <span>✓</span>
-                <p>No environmental warnings at the moment.</p>
-            </div>
-        `;
+        const item = document.createElement("li");
+
+        if (
+            readings.temperature === null ||
+            readings.humidity === null ||
+            readings.light === null
+        ) {
+            item.textContent =
+                "Waiting for complete environmental readings.";
+            item.classList.add("info-alert");
+        } else {
+            item.textContent = "No active environmental alerts.";
+            item.classList.add("info-alert");
+        }
+
+        list.appendChild(item);
         return;
     }
 
-    container.innerHTML = alerts.map(alert => `
-        <div class="alert-item">
-            <div class="alert-icon">!</div>
-            <div class="alert-content">
-                <strong>${alert.title}</strong>
-                <p><b>Current reading:</b> ${alert.value}</p>
-                <p><b>Configured limit:</b> ${alert.limit}</p>
-                <p>${alert.message}</p>
-            </div>
-        </div>
-    `).join("");
+    alerts.forEach((alert) => {
+        const item = document.createElement("li");
+        item.textContent = alert.message;
+        list.appendChild(item);
+    });
 }
 
-function updateDashboard(data) {
-    lastSensorResponse = data;
 
-    const hasReading =
-        data.temperature !== null &&
-        data.temperature !== undefined;
+function updateSensorCards(readings) {
+    const temperature = readings.temperature;
+    const humidity = readings.humidity;
+    const light = readings.light;
 
-    if (!hasReading) {
-        setText("temperature", "--");
-        setText("humidity", "--");
-        setText("light", "--");
-        setText("occupancy", "--");
-        setText("lastUpdated", "Waiting for data");
-
-        updateStatus(data);
-        updateAlerts(data);
-        return;
-    }
-
-    const temperature = Number(data.temperature);
-    const humidity = Number(data.humidity);
-    const light = Number(data.light);
-    const motion = Number(data.motion);
-
-    setText("temperature", temperature.toFixed(1));
-    setText("humidity", humidity.toFixed(1));
-    setText("light", light);
+    setText("temperature", formatNumber(temperature));
+    setText("humidity", formatNumber(humidity));
+    setText("light", light === null ? "--" : String(light));
 
     setText(
         "temperatureNote",
-        temperature > LIMITS.highTemperature
-            ? "Above configured limit"
-            : "Temperature reading received"
+        temperature === null
+            ? "Waiting for reading"
+            : temperature > LIMITS.highTemperature
+                ? "Above recommended limit"
+                : "Within configured limit"
     );
 
     setText(
         "humidityNote",
-        humidity > LIMITS.highHumidity
-            ? "Above configured limit"
-            : "Humidity reading received"
+        humidity === null
+            ? "Waiting for reading"
+            : humidity > LIMITS.highHumidity
+                ? "Above recommended limit"
+                : "Within configured limit"
     );
 
     setText(
         "lightNote",
-        light < LIMITS.lowLight
-            ? "Below configured minimum"
-            : "Raw analog value from LDR"
+        light === null
+            ? "Waiting for reading"
+            : light < LIMITS.lowLight
+                ? "Light level is low"
+                : "Light level is acceptable"
     );
 
-    updateProgress("temperatureBar", temperature, 50);
-    updateProgress("humidityBar", humidity, 100);
-    updateProgress("lightBar", light, 1023);
+    const temperatureBar = $("temperatureBar");
+    const humidityBar = $("humidityBar");
+    const lightBar = $("lightBar");
 
-    setText("occupancy", motion === 1 ? "Motion" : "No motion");
+    if (temperatureBar) {
+        temperatureBar.style.width =
+            temperature === null
+                ? "0%"
+                : `${Math.max(0, Math.min(100, temperature / 50 * 100))}%`;
+    }
 
-    setText(
-        "occupancyNote",
-        motion === 1
-            ? "PIR sensor detected movement"
-            : "No movement detected currently"
-    );
+    if (humidityBar) {
+        humidityBar.style.width =
+            humidity === null
+                ? "0%"
+                : `${Math.max(0, Math.min(100, humidity))}%`;
+    }
 
-    setText(
-        "occupancyState",
-        motion === 1 ? "Movement detected" : "No movement"
-    );
+    if (lightBar) {
+        lightBar.style.width =
+            light === null
+                ? "0%"
+                : `${Math.max(0, Math.min(100, light / 1023 * 100))}%`;
+    }
 
-    $("occupancyDot").style.background =
-        motion === 1 ? "#18c887" : "#a6afbd";
-
-    setText("lastUpdated", formatDateTime(data.recorded_at));
-
-    updateStatus(data);
-    updateAlerts(data);
 }
 
-function updateCharts(history) {
-    if (!temperatureChart || !humidityChart || !lightChart) {
+
+function createChart(canvasId, label, color, unit) {
+    const canvas = $(canvasId);
+
+    if (!canvas || typeof Chart === "undefined") {
+        return null;
+    }
+
+    return new Chart(canvas, {
+        type: "line",
+
+        data: {
+            labels: [],
+            datasets: [{
+                label,
+                data: [],
+                borderColor: color,
+                backgroundColor: color + "22",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 2,
+                pointHoverRadius: 5
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+
+            interaction: {
+                intersect: false,
+                mode: "index"
+            },
+
+            plugins: {
+                legend: {
+                    display: false
+                },
+
+                tooltip: {
+                    callbacks: {
+                        label: (context) =>
+                            `${label}: ${context.parsed.y} ${unit}`
+                    }
+                }
+            },
+
+            scales: {
+                x: {
+                    ticks: {
+                        maxTicksLimit: 6,
+                        maxRotation: 0
+                    },
+                    grid: {
+                        display: false
+                    }
+                },
+
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+}
+
+
+function initializeCharts() {
+    temperatureChart = createChart(
+        "temperatureChart",
+        "Temperature",
+        "#e88a43",
+        "°C"
+    );
+
+    humidityChart = createChart(
+        "humidityChart",
+        "Humidity",
+        "#4786eb",
+        "%"
+    );
+
+    lightChart = createChart(
+        "lightChart",
+        "Light Intensity",
+        "#d6aa24",
+        "ADC"
+    );
+}
+
+
+function updateOneChart(chart, labels, values) {
+    if (!chart) {
         return;
     }
 
-    const recent = history.slice(-MAX_CHART_POINTS);
-
-    const labels = recent.map(item => formatTime(item.recorded_at));
-
-    const temperatures = recent.map(item =>
-        Number(item.temperature)
-    );
-
-    const humidities = recent.map(item =>
-        Number(item.humidity)
-    );
-
-    const lights = recent.map(item =>
-        Number(item.light)
-    );
-
-    const chartData = [
-        [temperatureChart, temperatures],
-        [humidityChart, humidities],
-        [lightChart, lights]
-    ];
-
-    for (const [chart, values] of chartData) {
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = values;
-        chart.update("none");
-    }
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = values;
+    chart.update("none");
 }
 
-function calculateRowStatus(item) {
-    return getAlerts(item).length > 0 ? "Warning" : "Normal";
+
+function updateCharts(historyRows) {
+    const rows = historyRows.slice(-MAX_CHART_POINTS);
+
+    const labels = rows.map((row) => {
+        if (!row.recorded_at) {
+            return "--";
+        }
+
+        const date = new Date(row.recorded_at);
+
+        return Number.isNaN(date.getTime())
+            ? row.recorded_at
+            : date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+    });
+
+    updateOneChart(
+        temperatureChart,
+        labels,
+        rows.map((row) => row.temperature)
+    );
+
+    updateOneChart(
+        humidityChart,
+        labels,
+        rows.map((row) => row.humidity)
+    );
+
+    updateOneChart(
+        lightChart,
+        labels,
+        rows.map((row) => row.light)
+    );
 }
 
-function updateHistoryTable(history) {
+
+function getHistoryStatus(row) {
+    const alerts = getAlerts({
+        temperature: row.temperature,
+        humidity: row.humidity,
+        light: row.light
+    });
+
+    return alerts.length > 0 ? "Warning" : "Normal";
+}
+
+
+function renderHistory(rows) {
     const table = $("historyTable");
 
-    // Show newest readings first in the table.
-    const recent = [...history].reverse().slice(0, 10);
-
-    setText("historyCount", `${recent.length} readings displayed`);
-
-    if (recent.length === 0) {
-        table.innerHTML = `
-            <tr>
-                <td colspan="6" class="table-empty">
-                    No readings recorded yet.
-                </td>
-            </tr>
-        `;
+    if (!table) {
         return;
     }
 
-    table.innerHTML = recent.map(item => {
-        const motion = Number(item.motion) === 1;
-        const status = calculateRowStatus(item);
+    table.replaceChildren();
 
-        return `
-            <tr>
-                <td>${formatDateTime(item.recorded_at)}</td>
-                <td>${Number(item.temperature).toFixed(1)} °C</td>
-                <td>${Number(item.humidity).toFixed(1)}%</td>
-                <td>${Number(item.light)}</td>
-                <td>
-                    <span class="motion-badge">
-                        ${motion ? "Motion" : "No motion"}
-                    </span>
-                </td>
-                <td>
-                    <span class="${status === "Warning"
-                        ? "warning-badge"
-                        : "normal-badge"}">
-                        ${status}
-                    </span>
-                </td>
-            </tr>
-        `;
-    }).join("");
+    setText("historyCount", `${rows.length} records`);
+
+    if (rows.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+
+        td.colSpan = 5;
+        td.textContent = "No sensor readings recorded yet.";
+
+        tr.appendChild(td);
+        table.appendChild(tr);
+        return;
+    }
+
+    rows.slice().reverse().forEach((row) => {
+        const tr = document.createElement("tr");
+
+        const values = [
+            formatTime(row.recorded_at),
+            `${formatNumber(row.temperature)} °C`,
+            `${formatNumber(row.humidity)}%`,
+            row.light === null ? "--" : String(row.light),
+            getHistoryStatus(row)
+        ];
+
+        values.forEach((value) => {
+            const td = document.createElement("td");
+            td.textContent = value;
+            tr.appendChild(td);
+        });
+
+        table.appendChild(tr);
+    });
 }
+
+
+function setupAttendance() {
+    const totalInput = $("totalStudents");
+    const presentInput = $("presentStudents");
+    const calculateButton = $("calculateAttendance");
+    const message = $("attendanceMessage");
+
+    if (!totalInput || !presentInput || !calculateButton) {
+        console.error("Attendance elements were not found in index.html.");
+        return;
+    }
+
+    function calculateAttendance(showError = true) {
+        const totalText = totalInput.value.trim();
+        const presentText = presentInput.value.trim();
+
+        const total = Number(totalText);
+        const present = Number(presentText);
+
+        const valid =
+            totalText !== "" &&
+            presentText !== "" &&
+            Number.isInteger(total) &&
+            Number.isInteger(present) &&
+            total >= 1 &&
+            present >= 0 &&
+            present <= total;
+
+        if (!valid) {
+            setText("presentCount", "--");
+            setText("absentCount", "--");
+            setText("attendancePercent", "--");
+            setText("occupancyPercent", "--");
+
+            if (message) {
+                message.textContent =
+                    "Enter a valid total and present count.";
+            }
+
+            if (showError) {
+                alert(
+                    "Enter a total of at least 1 student and a present count between 0 and the total."
+                );
+            }
+
+            return;
+        }
+
+        const absent = total - present;
+        const percentage = (present / total) * 100;
+        const formattedPercentage = `${percentage.toFixed(1)}%`;
+
+        setText("presentCount", String(present));
+        setText("absentCount", String(absent));
+        setText("attendancePercent", formattedPercentage);
+        setText("occupancyPercent", formattedPercentage);
+
+        if (message) {
+            message.textContent = "Attendance calculated successfully.";
+        }
+
+        try {
+            localStorage.setItem(
+                "classroomAttendance",
+                JSON.stringify({
+                    total,
+                    present
+                })
+            );
+        } catch (error) {
+            console.warn("Could not save attendance in this browser.", error);
+        }
+    }
+
+    calculateButton.addEventListener("click", () => {
+        calculateAttendance(true);
+    });
+
+    // Update automatically when both fields contain valid values.
+    totalInput.addEventListener("input", () => {
+        if (totalInput.value.trim() && presentInput.value.trim()) {
+            calculateAttendance(false);
+        }
+    });
+
+    presentInput.addEventListener("input", () => {
+        if (totalInput.value.trim() && presentInput.value.trim()) {
+            calculateAttendance(false);
+        }
+    });
+
+    // Restore previously entered attendance after a page refresh.
+    try {
+        const saved = localStorage.getItem("classroomAttendance");
+
+        if (saved) {
+            const attendance = JSON.parse(saved);
+
+            if (
+                Number.isInteger(attendance.total) &&
+                Number.isInteger(attendance.present) &&
+                attendance.total >= 1 &&
+                attendance.present >= 0 &&
+                attendance.present <= attendance.total
+            ) {
+                totalInput.value = attendance.total;
+                presentInput.value = attendance.present;
+                calculateAttendance(false);
+            }
+        }
+    } catch (error) {
+        console.warn("Could not restore saved attendance.", error);
+    }
+}
+
 
 async function fetchLatestData() {
-    try {
-        const response = await fetch("/api/data", {
-            cache: "no-store"
-        });
+    const response = await fetch("/api/data", {
+        cache: "no-store"
+    });
 
-        if (!response.ok) {
-            throw new Error(`Server returned ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        setConnection(true, "Connected");
-        updateDashboard(data);
-    } catch (error) {
-        setConnection(false, "Connection lost");
-
-        console.error("Unable to fetch sensor data:", error);
-
-        const banner = $("statusBanner");
-        banner.classList.remove("warning");
-        banner.classList.add("waiting");
-
-        setText("classroomStatus", "Server connection unavailable");
-        setText(
-            "statusDescription",
-            "Check that Flask is running and the dashboard can reach it."
-        );
-        setText("statusTag", "OFFLINE");
-        setText("statusSymbol", "!");
+    if (!response.ok) {
+        throw new Error("Could not fetch the latest sensor readings.");
     }
+
+    return response.json();
 }
+
 
 async function fetchHistory() {
+    const response = await fetch("/api/history", {
+        cache: "no-store"
+    });
+
+    if (!response.ok) {
+        throw new Error("Could not fetch sensor history.");
+    }
+
+    return response.json();
+}
+
+
+async function refreshDashboard() {
     try {
-        const response = await fetch("/api/history", {
-            cache: "no-store"
-        });
+        const readings = await fetchLatestData();
 
-        if (!response.ok) {
-            throw new Error(`Server returned ${response.status}`);
-        }
+        setConnection(true);
 
-        const history = await response.json();
+        const normalizedReadings = {
+            temperature:
+                readings.temperature == null
+                    ? null
+                    : Number(readings.temperature),
 
-        // Update only when the saved history has changed.
-        const signature = history.length
-            ? `${history.length}:${history[history.length - 1].id}`
-            : "empty";
+            humidity:
+                readings.humidity == null
+                    ? null
+                    : Number(readings.humidity),
 
-        if (signature !== lastHistorySignature) {
-            lastHistorySignature = signature;
+            light:
+                readings.light == null
+                    ? null
+                    : Number(readings.light)
+        };
 
-            updateCharts(history);
-            updateHistoryTable(history);
+        updateSensorCards(normalizedReadings);
+
+        const alerts = getAlerts(normalizedReadings);
+
+        updateOverallStatus(alerts, normalizedReadings);
+        updateAlerts(alerts, normalizedReadings);
+
+        setText(
+            "lastUpdated",
+            readings.recorded_at
+                ? formatTime(readings.recorded_at)
+                : "Waiting for sensor data"
+        );
+
+        try {
+            const historyRows = await fetchHistory();
+
+            renderHistory(historyRows);
+
+            const signature = JSON.stringify(historyRows);
+
+            if (signature !== lastHistorySignature) {
+                updateCharts(historyRows);
+                lastHistorySignature = signature;
+            }
+        } catch (historyError) {
+            console.error("History update failed:", historyError);
         }
     } catch (error) {
-        console.error("Unable to fetch sensor history:", error);
+        console.error("Dashboard update failed:", error);
+        setConnection(false);
+        setText("lastUpdated", "Connection failed");
+
+        const banner = $("statusBanner");
+
+        if (banner) {
+            banner.classList.remove("normal", "warning");
+            banner.classList.add("incomplete");
+        }
+
+        setText("classroomStatus", "Connection Error");
+        setText("statusTag", "OFFLINE");
+        setText("statusSymbol", "!");
+        setText(
+            "statusDescription",
+            "Cannot retrieve readings. Check that Flask is running."
+        );
     }
 }
 
-async function refreshDashboard() {
-    await fetchLatestData();
-    await fetchHistory();
-}
 
 document.addEventListener("DOMContentLoaded", () => {
     initializeCharts();
+    setupAttendance();
 
-    // Load data immediately, then refresh periodically.
     refreshDashboard();
-    setInterval(refreshDashboard, REFRESH_MS);
+    window.setInterval(refreshDashboard, REFRESH_MS);
 });

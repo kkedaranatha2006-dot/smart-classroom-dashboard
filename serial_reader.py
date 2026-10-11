@@ -3,7 +3,6 @@ import time
 import serial
 import requests
 
-# Change COM3 if your ESP8266 uses another COM port.
 SERIAL_PORT = "COM3"
 BAUD_RATE = 115200
 
@@ -12,7 +11,9 @@ FLASK_URL = "http://127.0.0.1:5000/api/data"
 try:
     board = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=2)
     time.sleep(2)
+
     print(f"Connected to ESP8266 on {SERIAL_PORT}")
+    print("Waiting for sensor readings...")
 
     while True:
         line = board.readline().decode(
@@ -25,26 +26,39 @@ try:
         try:
             data = json.loads(line)
 
-            required = {"temperature", "humidity", "light", "motion"}
+            # PIR/motion is no longer required
+            required = {"temperature", "humidity", "light"}
+
             if not required.issubset(data):
+                print("Ignoring incomplete data:", line)
                 continue
 
+            # Send only the three sensor readings to Flask
+            sensor_data = {
+                "temperature": data["temperature"],
+                "humidity": data["humidity"],
+                "light": data["light"]
+            }
+
             response = requests.post(
-                FLASK_URL, json=data, timeout=5
+                FLASK_URL,
+                json=sensor_data,
+                timeout=5
             )
 
-            print("Sensor data:", data)
+            print("Sensor data:", sensor_data)
             print("Flask response:", response.status_code)
 
         except json.JSONDecodeError:
-            continue
+            print("Ignoring non-JSON serial output:", line)
+
         except requests.RequestException as error:
             print("Flask connection error:", error)
             time.sleep(2)
 
 except serial.SerialException as error:
     print("Serial port error:", error)
-    print("Check the COM port and close Arduino Serial Monitor.")
+    print("Check COM3 and close Arduino Serial Monitor.")
 
 except KeyboardInterrupt:
     print("Stopping serial reader.")
