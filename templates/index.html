@@ -3,269 +3,352 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1120">
 
-    <title>Smart Classroom Monitoring System</title>
+    <title>Smart Classroom | IoT Dashboard</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </head>
 
 <body>
-    <header class="topbar">
+<div class="app-layout">
+
+    <!-- Mobile overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
         <div class="brand">
             <div class="brand-icon">SC</div>
             <div>
-                <h1>Smart Classroom</h1>
-                <p>IoT Monitoring System</p>
+                <h2>SmartClass</h2>
+                <p>IoT MONITORING</p>
             </div>
+            <button class="icon-button mobile-close" id="closeSidebar"
+                    aria-label="Close navigation">×</button>
         </div>
 
-        <div class="connection">
-            <span class="connection-dot" id="connectionDot"></span>
-            <span id="connectionStatus">Connecting...</span>
-        </div>
-    </header>
+        <div class="nav-label">WORKSPACE</div>
 
-    <main class="container">
-        <section class="welcome">
+        <nav class="navigation">
+            <a class="nav-link active" href="#overview">
+                <span class="nav-icon">▦</span>
+                Dashboard
+            </a>
+            <a class="nav-link" href="#environment">
+                <span class="nav-icon">◉</span>
+                Environment
+            </a>
+            <a class="nav-link" href="#analytics">
+                <span class="nav-icon">⌁</span>
+                Analytics
+            </a>
+            <a class="nav-link" href="#history">
+                <span class="nav-icon">◷</span>
+                Reading History
+            </a>
+            <a class="nav-link" href="#attendance">
+                <span class="nav-icon">♙</span>
+                Attendance
+            </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="connection-card">
+                <span class="connection-dot" id="connectionDot"></span>
+                <div>
+                    <strong id="connectionText">Connecting...</strong>
+                    <p id="lastUpdated">Waiting for readings</p>
+                </div>
+            </div>
+            <p class="sidebar-footer">SMART CLASSROOM SYSTEM<br>Engineering Mini Project</p>
+        </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content" id="overview">
+
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="icon-button menu-toggle" id="menuToggle"
+                        aria-label="Open navigation">☰</button>
+                <div>
+                    <p class="eyebrow">IOT / CLASSROOM</p>
+                    <h1>Dashboard Overview</h1>
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <span class="live-indicator"><span></span> LIVE MONITORING</span>
+                <div class="avatar">SC</div>
+            </div>
+        </header>
+
+        <section class="welcome-row">
             <div>
-                <p class="eyebrow">CLASSROOM OVERVIEW</p>
-                <h2>Monitoring Dashboard</h2>
-                <p class="muted">
-                    Monitor environmental conditions and calculate student attendance.
-                </p>
+                <h2>Classroom at a glance</h2>
+                <p>Monitor environmental conditions in real time.</p>
             </div>
-
-            <div class="updated">
-                <span>Last updated</span>
-                <strong id="lastUpdated">Waiting for data...</strong>
-            </div>
+            <div class="date-display" id="currentDate">Loading date...</div>
         </section>
 
-        <section class="status-banner incomplete" id="statusBanner">
-            <div class="status-symbol" id="statusSymbol">?</div>
-
+        <!-- System status -->
+        <section class="status-banner" id="statusBanner">
+            <div class="status-symbol" id="statusSymbol">✓</div>
             <div class="status-copy">
-                <h2 id="classroomStatus">Incomplete Data</h2>
-                <p id="statusDescription">
-                    Waiting for sensor readings.
-                </p>
+                <strong id="overallStatus">Waiting for sensor data</strong>
+                <p id="statusDescription">Connecting to your classroom sensors.</p>
+            </div>
+            <span class="status-pill" id="statusPill">CONNECTING</span>
+        </section>
+
+        <!-- Sensor cards -->
+        <section class="section-block" id="environment">
+            <div class="section-heading">
+                <div>
+                    <h2>Environmental sensors</h2>
+                    <p>Latest values received from the ESP8266</p>
+                </div>
+                <span class="refresh-label"><span class="refresh-dot"></span> Updates every 3 sec</span>
             </div>
 
-            <span class="status-tag" id="statusTag">WAITING</span>
-        </section>
+            <div class="sensor-grid">
+                <article class="sensor-card temperature-card">
+                    <div class="sensor-card-top">
+                        <div class="sensor-icon temperature-icon">°C</div>
+                        <span class="sensor-tag">TEMPERATURE</span>
+                    </div>
+                    <p class="sensor-name">Room Temperature</p>
+                    <div class="sensor-value">
+                        <span id="temperature">--</span><small>°C</small>
+                    </div>
+                    <p class="sensor-description" id="temperatureNote">Waiting for reading</p>
+                    <div class="sensor-progress">
+                        <div id="temperatureBar" class="progress-fill temperature-fill"></div>
+                    </div>
+                </article>
 
-        <section class="section-heading">
-            <div>
-                <h2>Live Sensor Readings</h2>
-                <p class="muted">Values refresh automatically every 3 seconds.</p>
-            </div>
-        </section>
+                <article class="sensor-card humidity-card">
+                    <div class="sensor-card-top">
+                        <div class="sensor-icon humidity-icon">%</div>
+                        <span class="sensor-tag">HUMIDITY</span>
+                    </div>
+                    <p class="sensor-name">Air Humidity</p>
+                    <div class="sensor-value">
+                        <span id="humidity">--</span><small>%</small>
+                    </div>
+                    <p class="sensor-description" id="humidityNote">Waiting for reading</p>
+                    <div class="sensor-progress">
+                        <div id="humidityBar" class="progress-fill humidity-fill"></div>
+                    </div>
+                </article>
 
-        <section class="sensor-grid">
-            <article class="sensor-card temperature-card">
-                <div class="sensor-top">
-                    <span class="sensor-icon">🌡️</span>
-                    <span class="sensor-label">TEMPERATURE</span>
-                </div>
-                <div class="sensor-value">
-                    <strong id="temperature">--</strong>
-                    <span>°C</span>
-                </div>
-                <p id="temperatureNote">Waiting for reading</p>
-                <div class="progress-track">
-                    <div class="progress-fill" id="temperatureBar"></div>
-                </div>
-                <small>Warning above 35°C</small>
-            </article>
-
-            <article class="sensor-card humidity-card">
-                <div class="sensor-top">
-                    <span class="sensor-icon">💧</span>
-                    <span class="sensor-label">HUMIDITY</span>
-                </div>
-                <div class="sensor-value">
-                    <strong id="humidity">--</strong>
-                    <span>%</span>
-                </div>
-                <p id="humidityNote">Waiting for reading</p>
-                <div class="progress-track">
-                    <div class="progress-fill" id="humidityBar"></div>
-                </div>
-                <small>Warning above 70%</small>
-            </article>
-
-            <article class="sensor-card light-card">
-                <div class="sensor-top">
-                    <span class="sensor-icon">💡</span>
-                    <span class="sensor-label">LIGHT INTENSITY</span>
-                </div>
-                <div class="sensor-value">
-                    <strong id="light">--</strong>
-                    <span>ADC</span>
-                </div>
-                <p id="lightNote">Waiting for reading</p>
-                <div class="progress-track">
-                    <div class="progress-fill" id="lightBar"></div>
-                </div>
-                <small>Warning below 150 ADC</small>
-            </article>
-
-        </section>
-
-        <section class="section-heading">
-            <div>
-                <h2>Student Attendance</h2>
-                <p class="muted">
-                    Enter the class strength and number of students present.
-                </p>
+                <article class="sensor-card light-card">
+                    <div class="sensor-card-top">
+                        <div class="sensor-icon light-icon">☼</div>
+                        <span class="sensor-tag">LIGHT LEVEL</span>
+                    </div>
+                    <p class="sensor-name">Ambient Light</p>
+                    <div class="sensor-value">
+                        <span id="light">--</span><small>/ 1023</small>
+                    </div>
+                    <p class="sensor-description" id="lightNote">Raw LDR sensor reading</p>
+                    <div class="sensor-progress">
+                        <div id="lightBar" class="progress-fill light-fill"></div>
+                    </div>
+                </article>
             </div>
         </section>
 
-        <section class="attendance-card">
-            <div class="attendance-form">
-                <div class="form-group">
-                    <label for="totalStudents">Total Students</label>
-                    <input
-                        type="number"
-                        id="totalStudents"
-                        min="1"
-                        step="1"
-                        placeholder="e.g. 60"
-                    >
+        <!-- Alerts -->
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <h2>Classroom alerts</h2>
+                    <p>Messages based on the latest sensor values</p>
                 </div>
+                <span class="count-pill" id="alertCount">0 alerts</span>
+            </div>
+            <div class="alerts-panel" id="alertsList" aria-live="polite">
+                <div class="empty-state">Waiting for sensor readings...</div>
+            </div>
+        </section>
 
-                <div class="form-group">
-                    <label for="presentStudents">Students Present</label>
-                    <input
-                        type="number"
-                        id="presentStudents"
-                        min="0"
-                        step="1"
-                        placeholder="e.g. 48"
-                    >
+        <!-- Analytics -->
+        <section class="section-block" id="analytics">
+            <div class="section-heading">
+                <div>
+                    <h2>Sensor analytics</h2>
+                    <p>Trends from stored classroom readings</p>
                 </div>
+            </div>
 
-                <button type="button" id="calculateAttendance">
-                    Calculate Attendance
+            <div class="chart-grid">
+                <article class="panel chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Temperature trend</h3>
+                            <p>Degrees Celsius</p>
+                        </div>
+                        <span class="chart-mark temperature-mark"></span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="temperatureChart"></canvas>
+                    </div>
+                </article>
+
+                <article class="panel chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Humidity trend</h3>
+                            <p>Relative humidity (%)</p>
+                        </div>
+                        <span class="chart-mark humidity-mark"></span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="humidityChart"></canvas>
+                    </div>
+                </article>
+
+                <article class="panel chart-panel chart-wide">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Light intensity trend</h3>
+                            <p>Raw LDR readings (0–1023)</p>
+                        </div>
+                        <span class="chart-mark light-mark"></span>
+                    </div>
+                    <div class="chart-container chart-container-wide">
+                        <canvas id="lightChart"></canvas>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Attendance -->
+        <section class="section-block" id="attendance">
+            <div class="section-heading">
+                <div>
+                    <h2>Attendance calculator</h2>
+                    <p>Enter the classroom attendance manually</p>
+                </div>
+                <span class="manual-tag">MANUAL ENTRY</span>
+            </div>
+
+            <div class="attendance-layout">
+                <article class="panel attendance-form-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Class attendance</h3>
+                            <p>Enter today's student counts</p>
+                        </div>
+                        <div class="attendance-icon">♙</div>
+                    </div>
+
+                    <form id="attendanceForm">
+                        <div class="form-field">
+                            <label for="totalStudents">Total students</label>
+                            <input id="totalStudents" type="number"
+                                   min="1" step="1" placeholder="e.g. 60" required>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="presentStudents">Students present</label>
+                            <input id="presentStudents" type="number"
+                                   min="0" step="1" placeholder="e.g. 48" required>
+                        </div>
+
+                        <p class="form-error" id="attendanceError" role="alert"></p>
+
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit">
+                                Calculate attendance
+                            </button>
+                            <button class="secondary-button" type="button" id="clearAttendance">
+                                Clear
+                            </button>
+                        </div>
+                    </form>
+                </article>
+
+                <article class="panel attendance-result-panel">
+                    <p class="result-label">ATTENDANCE PERCENTAGE</p>
+                    <div class="attendance-percentage">
+                        <span id="attendancePercentage">--</span><small>%</small>
+                    </div>
+                    <div class="attendance-track">
+                        <div id="attendanceBar" class="attendance-fill"></div>
+                    </div>
+
+                    <div class="attendance-stats">
+                        <div>
+                            <span class="stat-dot present-dot"></span>
+                            <div><small>Present</small><strong id="presentResult">--</strong></div>
+                        </div>
+                        <div>
+                            <span class="stat-dot absent-dot"></span>
+                            <div><small>Absent</small><strong id="absentResult">--</strong></div>
+                        </div>
+                        <div>
+                            <span class="stat-dot total-dot"></span>
+                            <div><small>Total</small><strong id="totalResult">--</strong></div>
+                        </div>
+                    </div>
+                    <p class="saved-note" id="attendanceSaved">Your manual result appears here.</p>
+                </article>
+            </div>
+        </section>
+
+        <!-- History -->
+        <section class="section-block" id="history">
+            <div class="section-heading history-heading">
+                <div>
+                    <h2>Reading history</h2>
+                    <p>Recent readings saved in the database</p>
+                </div>
+                <button class="primary-button export-button" id="exportButton" type="button">
+                    ↓ Export CSV
                 </button>
             </div>
 
-            <p class="form-message" id="attendanceMessage" role="status">
-                Enter the values to calculate attendance.
-            </p>
-
-            <div class="attendance-results">
-                <div class="result-box">
-                    <span>Present</span>
-                    <strong id="presentCount">--</strong>
-                </div>
-
-                <div class="result-box">
-                    <span>Absent</span>
-                    <strong id="absentCount">--</strong>
-                </div>
-
-                <div class="result-box">
-                    <span>Attendance</span>
-                    <strong id="attendancePercent">--</strong>
-                </div>
-
-                <div class="result-box">
-                    <span>Class Strength Present</span>
-                    <strong id="occupancyPercent">--</strong>
-                </div>
-            </div>
-
-            <p class="small-note">
-                Attendance is calculated from your manual entries and saved in this browser.
-                It is not automatically detected by the PIR sensor.
-            </p>
-        </section>
-
-        <section class="section-heading">
-            <div>
-                <h2>Sensor Trends</h2>
-                <p class="muted">Recent recorded readings.</p>
-            </div>
-        </section>
-
-        <section class="charts-grid">
-            <article class="chart-card">
-                <h3>Temperature</h3>
-                <div class="chart-wrap">
-                    <canvas id="temperatureChart"></canvas>
-                </div>
-            </article>
-
-            <article class="chart-card">
-                <h3>Humidity</h3>
-                <div class="chart-wrap">
-                    <canvas id="humidityChart"></canvas>
-                </div>
-            </article>
-
-            <article class="chart-card">
-                <h3>Light Intensity</h3>
-                <div class="chart-wrap">
-                    <canvas id="lightChart"></canvas>
-                </div>
-            </article>
-        </section>
-
-        <section class="section-heading">
-            <div>
-                <h2>Environmental Alerts</h2>
-                <p class="muted">Warnings based on configured sensor limits.</p>
-            </div>
-
-            <span class="count-badge" id="alertCount">0 alerts</span>
-        </section>
-
-        <section class="alerts-card">
-            <ul id="alertsList">
-                <li>No active alerts.</li>
-            </ul>
-        </section>
-
-        <section class="section-heading history-heading">
-            <div>
-                <h2>Reading History</h2>
-                <p class="muted">Most recent 100 recorded readings.</p>
-            </div>
-
-            <a class="export-button" href="/api/export">Download CSV</a>
-        </section>
-
-        <section class="history-card">
-            <div class="table-scroll">
-                <table>
-                    <thead>
+            <article class="panel history-panel">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
                         <tr>
-                            <th>Time</th>
+                            <th>Recorded at</th>
                             <th>Temperature</th>
                             <th>Humidity</th>
-                            <th>Light (ADC)</th>
+                            <th>Light level</th>
                             <th>Status</th>
                         </tr>
-                    </thead>
-                    <tbody id="historyTable">
-                        <tr>
-                            <td colspan="5">Waiting for sensor history...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <p class="history-count" id="historyCount">0 records</p>
+                        </thead>
+                        <tbody id="historyBody">
+                        <tr><td colspan="5" class="table-empty">Loading reading history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <span id="historyCount">Loading records...</span>
+                    <span>Most recent 100 readings</span>
+                </div>
+            </article>
         </section>
 
-        <footer>
-            <p>IoT-Based Smart Classroom Monitoring System</p>
-            <p>ESP8266 · DHT11 · LDR · PIR</p>
+        <footer class="page-footer">
+            <span>SmartClass <span class="footer-dot">●</span> IoT-Based Smart Classroom Monitoring System</span>
+            <span>ESP8266 · Flask · SQLite</span>
         </footer>
     </main>
+</div>
 </body>
 </html>
