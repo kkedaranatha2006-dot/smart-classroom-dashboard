@@ -5,7 +5,7 @@ import io
 from datetime import datetime
 
 app = Flask(__name__)
-DB_NAME = "classroom.db"
+DB_NAME = "/tmp/classroom.db"
 
 # Environmental warning limits
 HIGH_TEMPERATURE = 35
