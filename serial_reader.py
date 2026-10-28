@@ -6,7 +6,7 @@ import requests
 SERIAL_PORT = "COM3"
 BAUD_RATE = 115200
 
-FLASK_URL = "http://127.0.0.1:5000/api/data"
+FLASK_URL = "https://smart-classroom-dashboard-nine.vercel.app/api/data"
 
 try:
     board = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=2)
